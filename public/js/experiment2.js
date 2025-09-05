@@ -45,14 +45,20 @@ class CSVExperiment {
     async loadCSVData() {
         try {
             console.log('Starting to fetch CSV data from API...');
-            const response = await fetch('/api/companies');
+            // Add cache-busting parameter to prevent browser caching
+            const response = await fetch(`/api/companies?t=${Date.now()}`);
             console.log('API response status:', response.status);
             if (!response.ok) {
                 throw new Error('Failed to fetch CSV data');
             }
-            this.companies = await response.json();
+            const responseText = await response.text();
+            console.log('Raw response length:', responseText.length);
+            console.log('Raw response preview:', responseText.substring(0, 500));
+            
+            this.companies = JSON.parse(responseText);
             console.log('Loaded companies:', this.companies.length);
             console.log('First 3 companies from API:', this.companies.slice(0, 3));
+            console.log('Last 3 companies from API:', this.companies.slice(-3));
             this.updateStatus(`Loaded ${this.companies.length} companies from default CSV`);
         } catch (error) {
             console.error('Error loading CSV data:', error);

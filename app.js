@@ -382,13 +382,24 @@ app.get('/api/companies', (req, res) => {
         
         // Skip header line (first line)
         for (let i = 1; i < lines.length; i++) {
-            const values = parseCSVLine(lines[i]);
+            const line = lines[i];
+            if (!line.trim()) {
+                console.log(`Skipping empty line ${i}`);
+                continue;
+            }
+            
+            const values = parseCSVLine(line);
+            console.log(`Line ${i}: parsed ${values.length} values:`, values);
+            
             if (values.length >= 4) {
                 companies.push({
                     tin: values[1].trim(),
                     name: values[2].trim(),
                     address: values[3].trim()
                 });
+                console.log(`Added company ${companies.length}: ${values[2].trim()}`);
+            } else {
+                console.log(`Skipping line ${i}: insufficient values (${values.length} < 4)`);
             }
         }
         
