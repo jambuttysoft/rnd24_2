@@ -138,9 +138,10 @@ class CSVExperiment {
     }
     
     cleanTIN(tin) {
-        // Remove all characters except digits and take first 9 digits
+        // Remove all characters except digits but keep full length for better matching
         const cleaned = tin.replace(/\D/g, '');
-        return cleaned.substring(0, 9);
+        // Don't truncate - use full cleaned TIN for more accurate duplicate detection
+        return cleaned;
     }
     
     async startExperiment() {
@@ -242,13 +243,45 @@ class CSVExperiment {
             `;
         }
         
-        // Check if this TIN already exists
-        if (this.tinMap.has(cleanedTIN)) {
-            console.log(`Duplicate found for TIN: ${cleanedTIN}`);
-            // This is a duplicate
-            this.handleDuplicate(company, cleanedTIN);
+        // Check if this TIN already exists (including partial matches)
+        console.log(`Checking TIN map for: ${cleanedTIN}`);
+        console.log(`TIN map size: ${this.tinMap.size}`);
+        console.log(`TIN map keys:`, Array.from(this.tinMap.keys()));
+        
+        // Find potential duplicate by checking various matching patterns
+         let duplicateKey = null;
+         for (const existingTIN of this.tinMap.keys()) {
+             // Exact match
+             if (cleanedTIN === existingTIN) {
+                 duplicateKey = existingTIN;
+                 break;
+             }
+             
+             // Check if one is a prefix of another (minimum 8 digits for meaningful comparison)
+             const minLength = Math.min(cleanedTIN.length, existingTIN.length);
+             if (minLength >= 8) {
+                 const currentPrefix = cleanedTIN.substring(0, minLength);
+                 const existingPrefix = existingTIN.substring(0, minLength);
+                 if (currentPrefix === existingPrefix) {
+                     duplicateKey = existingTIN;
+                     break;
+                 }
+             }
+             
+             // Check first 9 digits if both are long enough
+             if (cleanedTIN.length >= 9 && existingTIN.length >= 9 && 
+                 cleanedTIN.substring(0, 9) === existingTIN.substring(0, 9)) {
+                 duplicateKey = existingTIN;
+                 break;
+             }
+         }
+        
+        if (duplicateKey) {
+            console.log(`✓ DUPLICATE FOUND for TIN: ${cleanedTIN} (matches existing: ${duplicateKey})`);
+            // This is a duplicate - use the existing key
+            this.handleDuplicate(company, duplicateKey);
         } else {
-            console.log(`New unique TIN: ${cleanedTIN}`);
+            console.log(`✓ NEW UNIQUE TIN: ${cleanedTIN}`);
             // This is a unique record
             this.addUniqueRecord(company, cleanedTIN);
         }
@@ -270,10 +303,11 @@ class CSVExperiment {
     
     addUniqueRecord(company, cleanedTIN) {
         try {
-            console.log(`Adding unique record for TIN: ${cleanedTIN}`);
+            console.log(`📝 Adding unique record for TIN: ${cleanedTIN}`);
             // Add record to unique records table (insert at top)
             const row = this.createUniqueTableRow(company, cleanedTIN);
             this.uniqueTableBody.prepend(row);
+            console.log(`📝 Row added to unique table`);
             
             // Save row reference in map
             this.tinMap.set(cleanedTIN, {
@@ -281,6 +315,7 @@ class CSVExperiment {
                 company: company,
                 count: 1
             });
+            console.log(`📝 TIN map updated, size now: ${this.tinMap.size}`);
             console.log(`Unique record added successfully for TIN: ${cleanedTIN}`);
         } catch (error) {
             console.error(`Error adding unique record for TIN ${cleanedTIN}:`, error);
@@ -288,35 +323,40 @@ class CSVExperiment {
         }
     }
     
-    handleDuplicate(company, cleanedTIN) {
+    handleDuplicate(company, duplicateKey) {
         try {
-            console.log(`Handling duplicate for TIN: ${cleanedTIN}`);
-            const existingData = this.tinMap.get(cleanedTIN);
-            console.log(`Existing data:`, existingData);
+            console.log(`🔄 Handling duplicate for TIN: ${company.tin} (duplicate key: ${duplicateKey})`);
+            const existingData = this.tinMap.get(duplicateKey);
+            console.log(`🔄 Found existing data:`, existingData);
             
             if (existingData.count === 1) {
-                console.log(`First duplicate found for TIN: ${cleanedTIN}`);
-                // First duplicate - move original record from unique to duplicates
-                this.moveToduplicatesTable(existingData, cleanedTIN);
-                
-                // Add new record (second row) to duplicates table
-                this.addToDuplicatesTable(company, cleanedTIN, 2);
-                
-                // Increment counter by 1 (now we have 2 records)
-                existingData.count = 2;
-            } else {
-                console.log(`Additional duplicate found for TIN: ${cleanedTIN}`);
-                // Subsequent duplicates - add only new record
-                existingData.count++;
-                this.addToDuplicatesTable(company, cleanedTIN, existingData.count);
-            }
+                 console.log(`🔄 First duplicate found for TIN: ${duplicateKey}`);
+                 // First duplicate - move original record from unique to duplicates
+                 console.log(`🔄 Moving original to duplicates table`);
+                 this.moveToduplicatesTable(existingData, duplicateKey);
+                 
+                 // Add new record (second row) to duplicates table
+                 console.log(`🔄 Adding current duplicate to duplicates table`);
+                 this.addToDuplicatesTable(company, duplicateKey, 2);
+                 
+                 // Increment counter by 1 (now we have 2 records)
+                 existingData.count = 2;
+                 console.log(`🔄 Updated count to: ${existingData.count}`);
+             } else {
+                 console.log(`🔄 Additional duplicate found for TIN: ${duplicateKey}`);
+                 // Subsequent duplicates - add only new record
+                 existingData.count++;
+                 console.log(`🔄 Updated count to: ${existingData.count}`);
+                 console.log(`🔄 Adding current duplicate to duplicates table`);
+                 this.addToDuplicatesTable(company, duplicateKey, existingData.count);
+             }
             
             // Update duplicates counter
             this.duplicateCount++;
             this.updateDuplicateCount(this.duplicateCount);
-            console.log(`Duplicate handled successfully for TIN: ${cleanedTIN}`);
-        } catch (error) {
-            console.error(`Error handling duplicate for TIN ${cleanedTIN}:`, error);
+            console.log(`🔄 Duplicate handled successfully for TIN: ${duplicateKey}, count: ${existingData.count}`);
+         } catch (error) {
+             console.error(`❌ Error handling duplicate for TIN ${duplicateKey}:`, error);
             throw error;
         }
     }

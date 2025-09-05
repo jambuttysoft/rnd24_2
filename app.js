@@ -356,8 +356,8 @@ function parseCSVLine(line) {
 
 // Route to serve companies.csv file for download
 app.get('/companies.csv', (req, res) => {
-    // Use the same file as API endpoint to ensure consistency
-    const csvPath = path.join(__dirname, 'companies.csv');
+    // Use default data file from public/data folder
+    const csvPath = path.join(__dirname, 'public', 'data', 'companies.csv');
     
     if (!fs.existsSync(csvPath)) {
         return res.status(404).send('CSV file not found');
@@ -367,7 +367,7 @@ app.get('/companies.csv', (req, res) => {
 });
 
 app.get('/api/companies', (req, res) => {
-    const csvPath = path.join(__dirname, 'companies.csv');
+    const csvPath = path.join(__dirname, 'public', 'data', 'companies.csv');
     console.log('Reading CSV file from:', csvPath);
     
     fs.readFile(csvPath, 'utf8', (err, data) => {
