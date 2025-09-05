@@ -69,6 +69,39 @@ app.get('/experiment1', (req, res) => {
                 <h1>Experiment 1: CSV Data Processing</h1>
                 <p>This experiment demonstrates real-time CSV data processing with TIN validation and duplicate detection.</p>
                 
+                <div class="data-format-section">
+                    <h3>Input Data Format</h3>
+                    <div class="alert alert-info">
+                        <h5>Data Description:</h5>
+                        <p>The data represents digitized company records stored in the database as-is, in the exact format they were originally entered. This includes:</p>
+                        <ul>
+                            <li><strong>TIN (Tax Identification Number):</strong> Company tax identification numbers with possible formatting variations</li>
+                            <li><strong>Company Name:</strong> Business names as they appear in original records, may contain duplicates with slight variations</li>
+                            <li><strong>Address:</strong> Company addresses in their original format from the database</li>
+                        </ul>
+                        <p><strong>Expected CSV Format:</strong> TIN, Company Name, Address (comma-separated values)</p>
+                    </div>
+                </div>
+                
+                <div class="file-controls">
+                    <h3>Data Source</h3>
+                    <div class="file-options">
+                        <div class="default-file-option">
+                            <p>Use default dataset:</p>
+                            <a href="/companies.csv" download class="btn btn-outline-primary">
+                                <i class="fas fa-download"></i> Download companies.csv
+                            </a>
+                        </div>
+                        <div class="custom-file-option">
+                            <p>Or upload your own CSV file:</p>
+                            <input type="file" id="csvFileInput" accept=".csv" class="form-control" style="margin-bottom: 10px;">
+                            <button id="loadCustomFile" class="btn btn-outline-secondary" disabled>
+                                <i class="fas fa-upload"></i> Load Custom File
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
                 <div class="experiment-controls">
                     <button id="startExperiment" class="btn btn-primary">Start Experiment</button>
                     <button id="stopExperiment" class="btn btn-secondary" disabled>Stop Experiment</button>
@@ -316,9 +349,25 @@ function parseCSVLine(line) {
     return result;
 }
 
+// Route to serve companies.csv file for download
+app.get('/companies.csv', (req, res) => {
+    const csvPath = path.join(__dirname, 'public', 'data', 'companies.csv');
+    
+    if (!fs.existsSync(csvPath)) {
+        return res.status(404).send('CSV file not found');
+    }
+    
+    res.download(csvPath, 'companies.csv');
+});
+
 app.get('/api/companies', (req, res) => {
     try {
-        const csvPath = path.join(__dirname, 'companies.csv');
+        const csvPath = path.join(__dirname, 'public', 'data', 'companies.csv');
+        
+        if (!fs.existsSync(csvPath)) {
+            return res.status(404).json({ error: 'CSV file not found' });
+        }
+        
         const csvData = fs.readFileSync(csvPath, 'utf8');
         const lines = csvData.split('\n').filter(line => line.trim());
         
@@ -326,29 +375,23 @@ app.get('/api/companies', (req, res) => {
             return res.json([]);
         }
         
-        const headers = parseCSVLine(lines[0]);
         const companies = [];
         
-        for (let i = 1; i < lines.length; i++) {
-            const values = parseCSVLine(lines[i]);
-            if (values.length >= headers.length) {
-                const company = {};
-                headers.forEach((header, index) => {
-                    // Сохраняем оригинальное форматирование, только убираем внешние кавычки если они есть
-                    let value = values[index] || '';
-                    if (value.startsWith('"') && value.endsWith('"')) {
-                        value = value.slice(1, -1);
-                    }
-                    company[header.trim()] = value;
+        for (let line of lines) {
+            const [tin, name, address] = parseCSVLine(line);
+            if (tin && name) {
+                companies.push({ 
+                    tin: tin.trim(), 
+                    name: name.trim(), 
+                    address: (address || '').trim() 
                 });
-                companies.push(company);
             }
         }
         
         res.json(companies);
     } catch (error) {
         console.error('Error reading CSV file:', error);
-        res.status(500).json({ error: 'Failed to read CSV file' });
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 

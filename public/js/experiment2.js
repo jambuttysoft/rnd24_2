@@ -26,12 +26,20 @@ class CSVExperiment {
         this.duplicatesTableBody = document.getElementById('duplicates-table-body');
         this.uniqueTable = document.getElementById('unique-table');
         this.duplicatesTable = document.getElementById('duplicates-table');
+        
+        // File upload elements
+        this.csvFileInput = document.getElementById('csvFileInput');
+        this.loadCustomFileBtn = document.getElementById('loadCustomFile');
     }
     
     bindEvents() {
         this.startBtn.addEventListener('click', () => this.startExperiment());
         this.stopBtn.addEventListener('click', () => this.stopExperiment());
         this.resetBtn.addEventListener('click', () => this.resetExperiment());
+        
+        // File upload events
+        this.csvFileInput.addEventListener('change', (e) => this.handleFileSelect(e));
+        this.loadCustomFileBtn.addEventListener('click', () => this.loadCustomFile());
     }
     
     async loadCSVData() {
@@ -46,6 +54,77 @@ class CSVExperiment {
             console.error('Error loading CSV data:', error);
             this.updateStatus('Data loading error');
         }
+    }
+    
+    handleFileSelect(event) {
+        const file = event.target.files[0];
+        if (file && file.type === 'text/csv') {
+            this.loadCustomFileBtn.disabled = false;
+            this.selectedFile = file;
+        } else {
+            this.loadCustomFileBtn.disabled = true;
+            this.selectedFile = null;
+            if (file) {
+                alert('Please select a valid CSV file.');
+            }
+        }
+    }
+    
+    loadCustomFile() {
+        if (!this.selectedFile) {
+            alert('Please select a CSV file first.');
+            return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const csvContent = e.target.result;
+                this.parseCustomCSV(csvContent);
+                this.updateStatus('Custom file loaded successfully');
+            } catch (error) {
+                console.error('Error reading file:', error);
+                this.updateStatus('Error reading custom file');
+                alert('Error reading the CSV file. Please check the file format.');
+            }
+        };
+        reader.readAsText(this.selectedFile);
+    }
+    
+    parseCustomCSV(csvContent) {
+        const lines = csvContent.split('\n').filter(line => line.trim());
+        this.companies = [];
+        
+        for (let line of lines) {
+            const [tin, name, address] = this.parseCSVLine(line);
+            if (tin && name) {
+                this.companies.push({ tin, name, address: address || '' });
+            }
+        }
+        
+        console.log('Loaded custom companies:', this.companies.length);
+    }
+    
+    parseCSVLine(line) {
+        const result = [];
+        let current = '';
+        let inQuotes = false;
+        
+        for (let i = 0; i < line.length; i++) {
+            const char = line[i];
+            
+            if (char === '"') {
+                inQuotes = !inQuotes;
+            } else if (char === ',' && !inQuotes) {
+                result.push(current.trim());
+                current = '';
+            } else {
+                current += char;
+            }
+        }
+        
+        result.push(current.trim());
+        return result;
     }
     
     cleanTIN(tin) {
