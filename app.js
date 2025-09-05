@@ -325,6 +325,11 @@ app.get('/experiment4', (req, res) => {
      });
 });
 
+// Research page route
+app.get('/research', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'research.html'));
+});
+
 // API endpoint for getting CSV data
 // Функция для правильного парсинга CSV с учетом кавычек
 function parseCSVLine(line) {
