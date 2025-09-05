@@ -410,6 +410,8 @@ class CSVExperiment {
     }
     
     createUniqueTableRow(company, cleanedTIN) {
+        console.log('Creating unique row for company:', company);
+        console.log('Company TIN:', company.tin, 'Cleaned TIN:', cleanedTIN);
         const row = document.createElement('tr');
         row.innerHTML = `
             <td>${company.tin || ''}</td>
@@ -421,6 +423,8 @@ class CSVExperiment {
     }
     
     createDuplicateTableRow(company, cleanedTIN, count) {
+        console.log('Creating duplicate row for company:', company);
+        console.log('Company TIN:', company.tin, 'Cleaned TIN:', cleanedTIN);
         const row = document.createElement('tr');
         row.innerHTML = `
             <td>${company.tin || ''}</td>

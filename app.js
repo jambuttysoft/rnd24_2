@@ -165,7 +165,7 @@ app.get('/experiment1', (req, res) => {
                 </div>
             </div>
             
-            <script src="/js/experiment2.js"></script>
+            <script src="/js/experiment1.js"></script>
         `
     });
 });
