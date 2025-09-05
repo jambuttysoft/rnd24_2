@@ -381,8 +381,8 @@ app.get('/api/companies', (req, res) => {
         console.log('Total lines in CSV:', lines.length);
         const companies = [];
         
-        // Skip header line (first line)
-        for (let i = 1; i < lines.length; i++) {
+        // Process all lines, but skip headers
+        for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
             if (!line.trim()) {
                 console.log(`Skipping empty line ${i}`);

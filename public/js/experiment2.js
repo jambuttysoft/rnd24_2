@@ -55,7 +55,19 @@ class CSVExperiment {
             console.log('Raw response length:', responseText.length);
             console.log('Raw response preview:', responseText.substring(0, 500));
             
-            this.companies = JSON.parse(responseText);
+            let companies = JSON.parse(responseText);
+            
+            // Filter out header rows that might have been included
+            companies = companies.filter(company => {
+                // Skip if this looks like a header row
+                if (company.tin === 'ID' || company.name === 'TIN' || company.address === 'NAME') {
+                    console.log('Filtering out header row:', company);
+                    return false;
+                }
+                return true;
+            });
+            
+            this.companies = companies;
             console.log('Loaded companies:', this.companies.length);
             console.log('First 3 companies from API:', this.companies.slice(0, 3));
             console.log('Last 3 companies from API:', this.companies.slice(-3));

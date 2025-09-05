@@ -42,7 +42,19 @@ class CSVExperiment {
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            this.companies = await response.json();
+            let companies = await response.json();
+            
+            // Filter out header rows that might have been included
+            companies = companies.filter(company => {
+                // Skip if this looks like a header row
+                if (company.tin === 'TIN' || company.name === 'NAME' || company.address === 'ADDRESS') {
+                    console.log('Filtering out header row:', company);
+                    return false;
+                }
+                return true;
+            });
+            
+            this.companies = companies;
             console.log('Loaded companies from API:', this.companies.length);
             console.log('First 3 companies:', this.companies.slice(0, 3));
         } catch (error) {
