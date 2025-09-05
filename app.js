@@ -361,38 +361,36 @@ app.get('/companies.csv', (req, res) => {
 });
 
 app.get('/api/companies', (req, res) => {
-    try {
-        const csvPath = path.join(__dirname, 'public', 'data', 'companies.csv');
-        
-        if (!fs.existsSync(csvPath)) {
-            return res.status(404).json({ error: 'CSV file not found' });
+    const csvPath = path.join(__dirname, 'companies.csv');
+    console.log('Reading CSV file from:', csvPath);
+    
+    fs.readFile(csvPath, 'utf8', (err, data) => {
+        if (err) {
+            console.error('Error reading CSV file:', err);
+            return res.status(500).json({ error: 'Internal server error' });
         }
         
-        const csvData = fs.readFileSync(csvPath, 'utf8');
-        const lines = csvData.split('\n').filter(line => line.trim());
-        
-        if (lines.length === 0) {
-            return res.json([]);
-        }
-        
+        console.log('CSV file read successfully, data length:', data.length);
+        const lines = data.trim().split('\n');
+        console.log('Total lines in CSV:', lines.length);
         const companies = [];
         
-        for (let line of lines) {
-            const [tin, name, address] = parseCSVLine(line);
-            if (tin && name) {
-                companies.push({ 
-                    tin: tin.trim(), 
-                    name: name.trim(), 
-                    address: (address || '').trim() 
+        // Skip header line (first line)
+        for (let i = 1; i < lines.length; i++) {
+            const values = parseCSVLine(lines[i]);
+            if (values.length >= 4) {
+                companies.push({
+                    tin: values[1].trim(),
+                    name: values[2].trim(),
+                    address: values[3].trim()
                 });
             }
         }
         
+        console.log('Parsed companies count:', companies.length);
+        console.log('First 3 companies:', companies.slice(0, 3));
         res.json(companies);
-    } catch (error) {
-        console.error('Error reading CSV file:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
+    });
 });
 
 // Start server

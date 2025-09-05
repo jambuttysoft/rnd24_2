@@ -44,12 +44,16 @@ class CSVExperiment {
     
     async loadCSVData() {
         try {
+            console.log('Starting to fetch CSV data from API...');
             const response = await fetch('/api/companies');
+            console.log('API response status:', response.status);
             if (!response.ok) {
                 throw new Error('Failed to fetch CSV data');
             }
             this.companies = await response.json();
             console.log('Loaded companies:', this.companies.length);
+            console.log('First 3 companies from API:', this.companies.slice(0, 3));
+            this.updateStatus(`Loaded ${this.companies.length} companies from default CSV`);
         } catch (error) {
             console.error('Error loading CSV data:', error);
             this.updateStatus('Data loading error');
@@ -213,7 +217,7 @@ class CSVExperiment {
         
         const company = this.companies[this.currentIndex];
         this.currentRowData = company;
-        const cleanedTIN = this.cleanTIN(company.TIN || '');
+        const cleanedTIN = this.cleanTIN(company.tin || '');
         
         // Increment index immediately to avoid infinite loop
         this.currentIndex++;
@@ -222,8 +226,8 @@ class CSVExperiment {
         // Update current row display
         if (this.currentRowElement) {
             this.currentRowElement.innerHTML = `
-                <strong>Current row:</strong> TIN: ${company.TIN || ''} → ${cleanedTIN}, 
-                Company: ${company.NAME || ''}, Address: ${company.ADDRESS || ''}
+                <strong>Current row:</strong> TIN: ${company.tin || ''} → ${cleanedTIN}, 
+                Company: ${company.name || ''}, Address: ${company.address || ''}
             `;
         }
         
@@ -318,10 +322,10 @@ class CSVExperiment {
     createUniqueTableRow(company, cleanedTIN) {
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td>${company.TIN || ''}</td>
+            <td>${company.tin || ''}</td>
             <td class="tin-cell">${cleanedTIN}</td>
-            <td>${company.NAME || ''}</td>
-            <td>${company.ADDRESS || ''}</td>
+            <td>${company.name || ''}</td>
+            <td>${company.address || ''}</td>
         `;
         return row;
     }
@@ -329,10 +333,10 @@ class CSVExperiment {
     createDuplicateTableRow(company, cleanedTIN, count) {
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td>${company.TIN || ''}</td>
+            <td>${company.tin || ''}</td>
             <td class="tin-cell">${cleanedTIN}</td>
-            <td>${company.NAME || ''}</td>
-            <td>${company.ADDRESS || ''}</td>
+            <td>${company.name || ''}</td>
+            <td>${company.address || ''}</td>
         `;
         return row;
     }
