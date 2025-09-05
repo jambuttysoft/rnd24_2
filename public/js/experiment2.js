@@ -105,10 +105,28 @@ class CSVExperiment {
         const lines = csvContent.split('\n').filter(line => line.trim());
         this.companies = [];
         
-        for (let line of lines) {
-            const [tin, name, address] = this.parseCSVLine(line);
-            if (tin && name) {
-                this.companies.push({ tin, name, address: address || '' });
+        // Skip header line if it exists
+        let startIndex = 0;
+        if (lines.length > 0 && lines[0].toLowerCase().includes('id') && lines[0].toLowerCase().includes('tin')) {
+            startIndex = 1;
+        }
+        
+        for (let i = startIndex; i < lines.length; i++) {
+            const line = lines[i];
+            const values = this.parseCSVLine(line);
+            
+            // CSV structure: ID,TIN,NAME,ADDRESS
+            if (values.length >= 4) {
+                const [id, tin, name, address] = values;
+                if (tin && name) {
+                    this.companies.push({ tin: tin.trim(), name: name.trim(), address: address.trim() || '' });
+                }
+            } else if (values.length >= 3) {
+                // Fallback for files without ID column: TIN,NAME,ADDRESS
+                const [tin, name, address] = values;
+                if (tin && name) {
+                    this.companies.push({ tin: tin.trim(), name: name.trim(), address: address.trim() || '' });
+                }
             }
         }
         
