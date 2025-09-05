@@ -271,9 +271,9 @@ class CSVExperiment {
     addUniqueRecord(company, cleanedTIN) {
         try {
             console.log(`Adding unique record for TIN: ${cleanedTIN}`);
-            // Add record to unique records table
+            // Add record to unique records table (insert at top)
             const row = this.createUniqueTableRow(company, cleanedTIN);
-            this.uniqueTableBody.appendChild(row);
+            this.uniqueTableBody.prepend(row);
             
             // Save row reference in map
             this.tinMap.set(cleanedTIN, {
@@ -336,7 +336,7 @@ class CSVExperiment {
     
     addToDuplicatesTable(company, cleanedTIN, count) {
         const row = this.createDuplicateTableRow(company, cleanedTIN, count);
-        this.duplicatesTableBody.appendChild(row);
+        this.duplicatesTableBody.prepend(row);
         
         // Highlight new row
         this.flashRow(row);
