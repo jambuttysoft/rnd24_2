@@ -393,6 +393,12 @@ app.get('/api/companies', (req, res) => {
             console.log(`Line ${i}: parsed ${values.length} values:`, values);
             
             if (values.length >= 4) {
+                // Skip header row if it contains 'ID', 'TIN', 'NAME' pattern
+                if (values[0].toUpperCase() === 'ID' && values[1].toUpperCase() === 'TIN' && values[2].toUpperCase() === 'NAME') {
+                    console.log(`Skipping header line ${i}:`, values);
+                    continue;
+                }
+                
                 companies.push({
                     tin: values[1].trim(),
                     name: values[2].trim(),
