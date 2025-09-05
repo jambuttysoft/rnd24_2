@@ -1,0 +1,324 @@
+class CSVExperiment {
+    constructor() {
+        this.companies = [];
+        this.processedData = [];
+        this.currentIndex = 0;
+        this.intervalId = null;
+        this.isRunning = false;
+        this.duplicateCount = 0;
+        this.tinMap = new Map(); // For tracking TIN and their positions in table
+        this.duplicateGroups = new Map(); // For storing duplicate groups
+        this.currentRowData = null; // Current row being processed
+        
+        this.initializeElements();
+        this.bindEvents();
+    }
+    
+    initializeElements() {
+        this.startBtn = document.getElementById('startExperiment');
+        this.stopBtn = document.getElementById('stopExperiment');
+        this.resetBtn = document.getElementById('resetExperiment');
+        this.statusElement = document.getElementById('experimentStatus');
+        this.processedCountElement = document.getElementById('processed-count');
+        this.duplicateCountElement = document.getElementById('duplicates-count');
+        this.currentRowElement = document.getElementById('current-row');
+        this.uniqueTableBody = document.getElementById('unique-table-body');
+        this.duplicatesTableBody = document.getElementById('duplicates-table-body');
+        this.uniqueTable = document.getElementById('unique-table');
+        this.duplicatesTable = document.getElementById('duplicates-table');
+    }
+    
+    bindEvents() {
+        this.startBtn.addEventListener('click', () => this.startExperiment());
+        this.stopBtn.addEventListener('click', () => this.stopExperiment());
+        this.resetBtn.addEventListener('click', () => this.resetExperiment());
+    }
+    
+    async loadCSVData() {
+        try {
+            const response = await fetch('/api/companies');
+            if (!response.ok) {
+                throw new Error('Failed to fetch CSV data');
+            }
+            this.companies = await response.json();
+            console.log('Loaded companies:', this.companies.length);
+        } catch (error) {
+            console.error('Error loading CSV data:', error);
+            this.updateStatus('Data loading error');
+        }
+    }
+    
+    cleanTIN(tin) {
+        // Remove all characters except digits and take first 9 digits
+        const cleaned = tin.replace(/\D/g, '');
+        return cleaned.substring(0, 9);
+    }
+    
+    async startExperiment() {
+        if (this.isRunning) return;
+        
+        this.updateStatus('Loading data...');
+        await this.loadCSVData();
+        
+        if (this.companies.length === 0) {
+            this.updateStatus('No data to process');
+            return;
+        }
+        
+        this.isRunning = true;
+        this.startBtn.disabled = true;
+        this.stopBtn.disabled = false;
+        this.updateStatus('Experiment started');
+        
+        // Start processing every second
+        this.intervalId = setInterval(() => {
+            this.processNextRow();
+        }, 100);
+    }
+    
+    stopExperiment() {
+        if (!this.isRunning) return;
+        
+        this.isRunning = false;
+        this.startBtn.disabled = false;
+        this.stopBtn.disabled = true;
+        
+        if (this.intervalId) {
+            clearInterval(this.intervalId);
+            this.intervalId = null;
+        }
+        
+        this.updateStatus('Experiment stopped');
+    }
+    
+
+
+    resetExperiment() {
+        this.stopExperiment();
+        
+        this.currentIndex = 0;
+        this.processedCount = 0;
+        this.duplicateCount = 0;
+        this.tinMap.clear();
+        this.duplicateGroups = new Map(); // For storing duplicate groups
+        this.currentRowData = null;
+        this.processedData = []; // Clear old data
+        
+        this.uniqueTableBody.innerHTML = '';
+        this.duplicatesTableBody.innerHTML = '';
+        this.updateStatus('Ready to start');
+        this.updateProcessedCount(0);
+        this.updateDuplicateCount(0);
+        if (this.currentRowElement) {
+            this.currentRowElement.textContent = 'Waiting to start...';
+        }
+        
+        // Reset buttons to initial state
+        if (this.startBtn) {
+            this.startBtn.disabled = false;
+        }
+        if (this.stopBtn) {
+            this.stopBtn.disabled = true;
+        }
+    }
+    
+    processNextRow() {
+        if (this.currentIndex >= this.companies.length) {
+            this.stopExperiment();
+            this.updateStatus('Experiment completed');
+            if (this.currentRowElement) {
+                this.currentRowElement.textContent = 'All data processed';
+            }
+            return;
+        }
+        
+        const company = this.companies[this.currentIndex];
+        this.currentRowData = company;
+        const cleanedTIN = this.cleanTIN(company.TIN || '');
+        
+        // Increment index immediately to avoid infinite loop
+        this.currentIndex++;
+        this.updateProcessedCount(this.currentIndex);
+        
+        // Update current row display
+        if (this.currentRowElement) {
+            this.currentRowElement.innerHTML = `
+                <strong>Current row:</strong> TIN: ${company.TIN || ''} → ${cleanedTIN}, 
+                Company: ${company.NAME || ''}, Address: ${company.ADDRESS || ''}
+            `;
+        }
+        
+        // Check if this TIN already exists
+        if (this.tinMap.has(cleanedTIN)) {
+            // This is a duplicate
+            this.handleDuplicate(company, cleanedTIN);
+        } else {
+            // This is a unique record
+            this.addUniqueRecord(company, cleanedTIN);
+        }
+    }
+    
+    updateStatus(status) {
+        this.statusElement.textContent = status;
+    }
+    
+    updateProcessedCount(count) {
+        this.processedCountElement.textContent = count;
+    }
+    
+    updateDuplicateCount(count) {
+        this.duplicateCountElement.textContent = count;
+    }
+    
+    addUniqueRecord(company, cleanedTIN) {
+        // Add record to unique records table
+        const row = this.createUniqueTableRow(company, cleanedTIN);
+        this.uniqueTableBody.appendChild(row);
+        
+        // Save row reference in map
+        this.tinMap.set(cleanedTIN, {
+            uniqueRow: row,
+            company: company,
+            count: 1
+        });
+    }
+    
+    handleDuplicate(company, cleanedTIN) {
+        const existingData = this.tinMap.get(cleanedTIN);
+        
+        if (existingData.count === 1) {
+            // First duplicate - move original record from unique to duplicates
+            this.moveToduplicatesTable(existingData, cleanedTIN);
+            
+            // Add new record (second row) to duplicates table
+            this.addToDuplicatesTable(company, cleanedTIN, 2);
+            
+            // Increment counter by 1 (now we have 2 records)
+            existingData.count = 2;
+        } else {
+            // Subsequent duplicates - add only new record
+            existingData.count++;
+            this.addToDuplicatesTable(company, cleanedTIN, existingData.count);
+        }
+        
+        // Update duplicates counter
+        this.duplicateCount++;
+        this.updateDuplicateCount(this.duplicateCount);
+    }
+    
+    moveToduplicatesTable(existingData, cleanedTIN) {
+        // Remove from unique records table
+        existingData.uniqueRow.remove();
+        
+        // Add original record to duplicates table with counter 1
+        this.addToDuplicatesTable(existingData.company, cleanedTIN, 1);
+        
+        // Create duplicates group
+        if (!this.duplicateGroups.has(cleanedTIN)) {
+            this.duplicateGroups.set(cleanedTIN, []);
+        }
+    }
+    
+    addToDuplicatesTable(company, cleanedTIN, count) {
+        const row = this.createDuplicateTableRow(company, cleanedTIN, count);
+        this.duplicatesTableBody.appendChild(row);
+        
+        // Highlight new row
+        this.flashRow(row);
+        
+        // Add to duplicates group
+        if (!this.duplicateGroups.has(cleanedTIN)) {
+            this.duplicateGroups.set(cleanedTIN, []);
+        }
+        this.duplicateGroups.get(cleanedTIN).push(row);
+        
+        // Sort duplicates table by Cleaned TIN
+        this.sortDuplicatesTable();
+    }
+    
+    createUniqueTableRow(company, cleanedTIN) {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${company.TIN || ''}</td>
+            <td class="tin-cell">${cleanedTIN}</td>
+            <td>${company.NAME || ''}</td>
+            <td>${company.ADDRESS || ''}</td>
+        `;
+        return row;
+    }
+    
+    createDuplicateTableRow(company, cleanedTIN, count) {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${company.TIN || ''}</td>
+            <td class="tin-cell">${cleanedTIN}</td>
+            <td>${company.NAME || ''}</td>
+            <td>${company.ADDRESS || ''}</td>
+        `;
+        return row;
+    }
+    
+    flashRow(row) {
+        row.classList.add('flash');
+        setTimeout(() => row.classList.remove('flash'), 1000);
+    }
+    
+    sortDuplicatesTable() {
+        const rows = Array.from(this.duplicatesTableBody.querySelectorAll('tr'));
+        
+        // Sort rows by Cleaned TIN (second column)
+        rows.sort((a, b) => {
+            const tinA = a.cells[1].textContent.trim();
+            const tinB = b.cells[1].textContent.trim();
+            return tinA.localeCompare(tinB);
+        });
+        
+        // Clear table and add sorted rows with grouping
+        this.duplicatesTableBody.innerHTML = '';
+        let currentGroup = null;
+        let groupIndex = 0;
+        
+        rows.forEach((row, index) => {
+            const cleanedTIN = row.cells[1].textContent.trim();
+            
+            // Check if new group started
+            if (currentGroup !== cleanedTIN) {
+                currentGroup = cleanedTIN;
+                groupIndex++;
+            }
+            
+            // Add class for grouping
+            row.classList.remove('group-even', 'group-odd');
+            row.classList.add(groupIndex % 2 === 0 ? 'group-even' : 'group-odd');
+            
+            this.duplicatesTableBody.appendChild(row);
+        });
+        
+        // Save duplicates data for Experiment 2
+        this.saveDuplicatesData();
+    }
+    
+    // Save duplicates data to localStorage
+    saveDuplicatesData() {
+        const duplicatesData = {};
+        
+        this.duplicateGroups.forEach((rows, cleanedTin) => {
+            if (rows.length > 0) {
+                duplicatesData[cleanedTin] = rows.map(row => ({
+                    TIN: row.cells[0].textContent,
+                    cleanedTIN: row.cells[1].textContent,
+                    NAME: row.cells[2].textContent,
+                    ADDRESS: row.cells[3].textContent
+                }));
+            }
+        });
+        
+        localStorage.setItem('duplicatesData', JSON.stringify(duplicatesData));
+        console.log('Duplicates data saved for Experiment 2:', duplicatesData);
+    }
+}
+
+// Initialize experiment on page load
+document.addEventListener('DOMContentLoaded', () => {
+    new CSVExperiment();
+});
