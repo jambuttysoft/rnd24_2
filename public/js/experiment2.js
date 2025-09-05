@@ -206,7 +206,10 @@ class CSVExperiment {
     }
     
     processNextRow() {
+        console.log(`Processing row ${this.currentIndex + 1} of ${this.companies.length}`);
+        
         if (this.currentIndex >= this.companies.length) {
+            console.log('All data processed, stopping experiment');
             this.stopExperiment();
             this.updateStatus('Experiment completed');
             if (this.currentRowElement) {
@@ -216,8 +219,10 @@ class CSVExperiment {
         }
         
         const company = this.companies[this.currentIndex];
+        console.log(`Processing company:`, company);
         this.currentRowData = company;
         const cleanedTIN = this.cleanTIN(company.tin || '');
+        console.log(`Cleaned TIN: ${company.tin} → ${cleanedTIN}`);
         
         // Increment index immediately to avoid infinite loop
         this.currentIndex++;
@@ -233,12 +238,16 @@ class CSVExperiment {
         
         // Check if this TIN already exists
         if (this.tinMap.has(cleanedTIN)) {
+            console.log(`Duplicate found for TIN: ${cleanedTIN}`);
             // This is a duplicate
             this.handleDuplicate(company, cleanedTIN);
         } else {
+            console.log(`New unique TIN: ${cleanedTIN}`);
             // This is a unique record
             this.addUniqueRecord(company, cleanedTIN);
         }
+        
+        console.log(`Row ${this.currentIndex} processed successfully`);
     }
     
     updateStatus(status) {
@@ -254,39 +263,56 @@ class CSVExperiment {
     }
     
     addUniqueRecord(company, cleanedTIN) {
-        // Add record to unique records table
-        const row = this.createUniqueTableRow(company, cleanedTIN);
-        this.uniqueTableBody.appendChild(row);
-        
-        // Save row reference in map
-        this.tinMap.set(cleanedTIN, {
-            uniqueRow: row,
-            company: company,
-            count: 1
-        });
+        try {
+            console.log(`Adding unique record for TIN: ${cleanedTIN}`);
+            // Add record to unique records table
+            const row = this.createUniqueTableRow(company, cleanedTIN);
+            this.uniqueTableBody.appendChild(row);
+            
+            // Save row reference in map
+            this.tinMap.set(cleanedTIN, {
+                uniqueRow: row,
+                company: company,
+                count: 1
+            });
+            console.log(`Unique record added successfully for TIN: ${cleanedTIN}`);
+        } catch (error) {
+            console.error(`Error adding unique record for TIN ${cleanedTIN}:`, error);
+            throw error;
+        }
     }
     
     handleDuplicate(company, cleanedTIN) {
-        const existingData = this.tinMap.get(cleanedTIN);
-        
-        if (existingData.count === 1) {
-            // First duplicate - move original record from unique to duplicates
-            this.moveToduplicatesTable(existingData, cleanedTIN);
+        try {
+            console.log(`Handling duplicate for TIN: ${cleanedTIN}`);
+            const existingData = this.tinMap.get(cleanedTIN);
+            console.log(`Existing data:`, existingData);
             
-            // Add new record (second row) to duplicates table
-            this.addToDuplicatesTable(company, cleanedTIN, 2);
+            if (existingData.count === 1) {
+                console.log(`First duplicate found for TIN: ${cleanedTIN}`);
+                // First duplicate - move original record from unique to duplicates
+                this.moveToduplicatesTable(existingData, cleanedTIN);
+                
+                // Add new record (second row) to duplicates table
+                this.addToDuplicatesTable(company, cleanedTIN, 2);
+                
+                // Increment counter by 1 (now we have 2 records)
+                existingData.count = 2;
+            } else {
+                console.log(`Additional duplicate found for TIN: ${cleanedTIN}`);
+                // Subsequent duplicates - add only new record
+                existingData.count++;
+                this.addToDuplicatesTable(company, cleanedTIN, existingData.count);
+            }
             
-            // Increment counter by 1 (now we have 2 records)
-            existingData.count = 2;
-        } else {
-            // Subsequent duplicates - add only new record
-            existingData.count++;
-            this.addToDuplicatesTable(company, cleanedTIN, existingData.count);
+            // Update duplicates counter
+            this.duplicateCount++;
+            this.updateDuplicateCount(this.duplicateCount);
+            console.log(`Duplicate handled successfully for TIN: ${cleanedTIN}`);
+        } catch (error) {
+            console.error(`Error handling duplicate for TIN ${cleanedTIN}:`, error);
+            throw error;
         }
-        
-        // Update duplicates counter
-        this.duplicateCount++;
-        this.updateDuplicateCount(this.duplicateCount);
     }
     
     moveToduplicatesTable(existingData, cleanedTIN) {
