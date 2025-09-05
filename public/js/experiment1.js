@@ -101,7 +101,7 @@ class CSVExperiment {
         this.companies = [];
         
         // Skip header line
-        for (let i = 1; i < lines.length; i++) {
+        for (let i = 0; i < lines.length; i++) {
             const line = lines[i].trim();
             if (!line) continue;
             
