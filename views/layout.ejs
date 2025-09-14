@@ -14,20 +14,26 @@
                 <h2>Navigation</h2>
             </div>
             <ul class="sidebar-menu">
-                <li class="<%= currentPage === 'main' ? 'active' : '' %>">
-                    <a href="/">Main Page</a>
+                <li class="<%= currentPage === 'home' ? 'active' : '' %>">
+                    <a href="/">Home</a>
+                </li>
+                <li class="<%= currentPage === 'project-summary' ? 'active' : '' %>">
+                    <a href="/project-summary">Project Summary</a>
                 </li>
                 <li class="<%= currentPage === 'experiment1' ? 'active' : '' %>">
-                    <a href="/experiment1">Experiment 1</a>
+                    <a href="/experiment1">Experiment 1 <br>TIN Normalization & Duplicate Detection </a>
                 </li>
                 <li class="<%= currentPage === 'experiment2' ? 'active' : '' %>">
-                    <a href="/experiment2">Experiment 2</a>
+                    <a href="/experiment2">Experiment 2 <br> Consensus Algorithms</a>
                 </li>
                 <li class="<%= currentPage === 'experiment3' ? 'active' : '' %>">
-                    <a href="/experiment3">Experiment 3</a>
+                    <a href="/experiment3">Experiment 3<br> Practical Consensus Example</a>
                 </li>
                 <li class="<%= currentPage === 'experiment4' ? 'active' : '' %>">
-                    <a href="/experiment4">Experiment 4</a>
+                    <a href="/experiment4">Experiment 4<br>Address Verification & Normalization</a>
+                </li>
+                <li class="<%= currentPage === 'use-cases' ? 'active' : '' %>">
+                    <a href="/use-cases">Use Cases</a>
                 </li>
             </ul>
         </nav>

@@ -55,11 +55,10 @@ class CSVExperiment {
             });
             
             this.companies = companies;
-            console.log('Loaded companies from API:', this.companies.length);
-            console.log('First 3 companies:', this.companies.slice(0, 3));
+            console.log(`Loaded ${this.companies.length} companies from CSV`);
         } catch (error) {
             console.error('Error loading CSV data:', error);
-            this.updateStatus('Error loading data');
+            alert('Failed to load CSV data. Please try refreshing the page.');
         }
     }
     
@@ -219,6 +218,7 @@ class CSVExperiment {
             this.updateStatus('Completed');
             this.currentRowElement.textContent = 'All records processed';
             this.sortDuplicatesTable();
+            this.saveDuplicatesData();
             return;
         }
         
@@ -372,20 +372,27 @@ class CSVExperiment {
     }
     
     saveDuplicatesData() {
-        const duplicatesData = [];
+        const duplicatesData = {};
         const rows = this.duplicatesTableBody.querySelectorAll('tr');
         
         rows.forEach(row => {
             const cells = row.querySelectorAll('td');
-            duplicatesData.push({
-                tin: cells[0].textContent,
-                cleanedTIN: cells[1].textContent,
-                name: cells[2].textContent,
-                address: cells[3].textContent
+            const cleanedTIN = cells[1].textContent;
+            
+            if (!duplicatesData[cleanedTIN]) {
+                duplicatesData[cleanedTIN] = [];
+            }
+            
+            duplicatesData[cleanedTIN].push({
+                TIN: cells[0].textContent,
+                cleanedTIN: cleanedTIN,
+                NAME: cells[2].textContent,
+                ADDRESS: cells[3].textContent
             });
         });
         
-        console.log('Duplicates data:', duplicatesData);
+        localStorage.setItem('duplicatesData', JSON.stringify(duplicatesData));
+        console.log('Duplicates data saved for Experiment 2:', duplicatesData);
         return duplicatesData;
     }
 }
